@@ -1,0 +1,17 @@
+{
+  "name": "eps-admin-orbit",
+  "private": true,
+  "workspaces": [
+    "apps/backend",
+    "apps/frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w @eps-admin-orbit/backend\" \"npm run dev -w @eps-admin-orbit/frontend\"",
+    "build": "npm run build -w @eps-admin-orbit/backend && npm run build -w @eps-admin-orbit/frontend",
+    "typecheck": "npm run typecheck -w @eps-admin-orbit/backend && npm run typecheck -w @eps-admin-orbit/frontend",
+    "start": "npm run start -w @eps-admin-orbit/backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
