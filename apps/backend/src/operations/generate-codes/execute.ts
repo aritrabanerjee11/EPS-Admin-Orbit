@@ -98,7 +98,7 @@ export const generateCodesOperation: Operation = {
     });
 
     const result = await provider.generate({
-      ...parsed,
+      ...(parsed as any),
       providerTarget: context.providerTarget,
       traceId: context.traceId,
       signal: context.signal
