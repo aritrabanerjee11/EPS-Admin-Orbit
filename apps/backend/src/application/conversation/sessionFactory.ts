@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { ChatSession, CollectedFields, Operation, ProviderTarget } from "../../types/chat";
 import { SessionState } from "../../types/chat";
 
-export function createSession(operation: Operation = "generate_codes", providerTarget: ProviderTarget = "MOCK"): ChatSession {
+export function createSession(operation: Operation = "generate_codes", providerTarget: ProviderTarget = "DEV"): ChatSession {
   const now = new Date().toISOString();
 
   return {
@@ -10,7 +10,9 @@ export function createSession(operation: Operation = "generate_codes", providerT
     requestId: randomUUID(),
     operation,
     activeOperationId: operation,
-    collectedFields: {},
+    collectedFields: {
+      environment: providerTarget
+    },
     state: SessionState.IDLE,
     status: SessionState.IDLE,
     providerTarget,
@@ -38,7 +40,7 @@ export function normalizeSession(input?: Partial<ChatSession>): ChatSession {
     collectedFields: input.collectedFields ?? {},
     state,
     status: state,
-    providerTarget: input.providerTarget ?? "MOCK",
+    providerTarget: normalizeProviderTarget(input.providerTarget),
     executionLock: input.executionLock,
     requestSnapshot: input.requestSnapshot,
     createdAt: input.createdAt ?? now,
@@ -62,4 +64,8 @@ export function transitionSession(
 
 export function resetSession(providerTarget: ProviderTarget): ChatSession {
   return createSession("generate_codes", providerTarget);
+}
+
+function normalizeProviderTarget(providerTarget: unknown): ProviderTarget {
+  return providerTarget === "TEST" || providerTarget === "PREPROD" || providerTarget === "PROD" ? providerTarget : "DEV";
 }

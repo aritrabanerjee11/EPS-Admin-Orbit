@@ -27,6 +27,7 @@ type ChatStore = {
   resetForEdit: () => void;
   resetSession: () => void;
   resumePreviousSession: () => void;
+  updateCollectedField: (key: string, value: string | number | undefined) => void;
   addHistory: (result: ConfirmResult) => void;
 };
 
@@ -34,8 +35,9 @@ const SESSION_KEY = "eps-admin-orbit-session";
 const MESSAGES_KEY = "eps-admin-orbit-messages";
 const HISTORY_KEY = "eps-admin-orbit-history";
 
-const initialSession = loadSession() ?? createInitialSession();
-const initialMessages = loadMessages() ?? [
+const savedSessionAtStartup = loadSession();
+const initialSession = createInitialSession(normalizeProviderTarget(savedSessionAtStartup?.providerTarget));
+const initialMessages = [
   {
     id: createMessageId(),
     role: "bot" as const,
@@ -47,19 +49,10 @@ const initialMessages = loadMessages() ?? [
 export const useChatStore = create<ChatStore>((set) => ({
   messages: initialMessages,
   session: initialSession,
-  preview: initialSession.requestSnapshot
-    ? {
-        operationId: initialSession.requestSnapshot.operation,
-        operationName: "Generate Codes",
-        fields: Object.entries(initialSession.requestSnapshot.inputs)
-          .filter(([key]) => key !== "prodConfirmation")
-          .map(([key, value]) => ({ key, label: labelize(key), value: value ?? "" })),
-        requestSnapshot: initialSession.requestSnapshot
-      }
-    : undefined,
+  preview: undefined,
   result: undefined,
   error: undefined,
-  draftSaved: Boolean(loadSession()),
+  draftSaved: Boolean(savedSessionAtStartup),
   history: loadHistory(),
 
   addMessage: (role, content) =>
@@ -152,15 +145,14 @@ export const useChatStore = create<ChatStore>((set) => ({
           createdAt: new Date().toISOString()
         }
       ];
-      saveSession(session);
-      saveMessages(messages);
+      clearSavedDraft();
       return {
         session,
         messages,
         preview: undefined,
         result: undefined,
         error: undefined,
-        draftSaved: true
+        draftSaved: Boolean(loadSession())
       };
     }),
 
@@ -184,10 +176,38 @@ export const useChatStore = create<ChatStore>((set) => ({
       const history = [item, ...state.history].slice(0, 10);
       saveHistory(history);
       return { history };
+    }),
+
+  updateCollectedField: (key, value) =>
+    set((state) => {
+      const collectedFields = {
+        ...state.session.collectedFields,
+        [key]: value
+      };
+
+      if (value === undefined || value === "") {
+        delete collectedFields[key];
+      }
+
+      const session = {
+        ...state.session,
+        collectedFields,
+        state: state.session.state === "IDLE" ? "COLLECTING" as const : state.session.state,
+        status: state.session.state === "IDLE" ? "COLLECTING" as const : state.session.status,
+        updatedAt: new Date().toISOString()
+      };
+
+      saveSession(session);
+      return {
+        session,
+        preview: undefined,
+        result: undefined,
+        draftSaved: true
+      };
     })
 }));
 
-function createInitialSession(providerTarget: ProviderTarget = "MOCK"): ChatSession {
+function createInitialSession(providerTarget: ProviderTarget = "DEV"): ChatSession {
   const now = new Date().toISOString();
 
   return {
@@ -195,13 +215,19 @@ function createInitialSession(providerTarget: ProviderTarget = "MOCK"): ChatSess
     requestId: createMessageId(),
     operation: "generate_codes",
     activeOperationId: "generate_codes",
-    collectedFields: {},
+    collectedFields: {
+      environment: providerTarget
+    },
     state: "IDLE",
     status: "IDLE",
     providerTarget,
     createdAt: now,
     updatedAt: now
   };
+}
+
+function normalizeProviderTarget(providerTarget: unknown): ProviderTarget {
+  return providerTarget === "TEST" || providerTarget === "PREPROD" || providerTarget === "PROD" ? providerTarget : "DEV";
 }
 
 function createMessageId(): string {
@@ -224,6 +250,11 @@ function saveMessages(messages: ChatMessage[]): void {
   localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
 }
 
+function clearSavedDraft(): void {
+  localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(MESSAGES_KEY);
+}
+
 function loadHistory(): ExecutionHistoryItem[] {
   return readJson<ExecutionHistoryItem[]>(HISTORY_KEY) ?? [];
 }
@@ -239,8 +270,4 @@ function readJson<T>(key: string): T | undefined {
   } catch {
     return undefined;
   }
-}
-
-function labelize(key: string): string {
-  return key.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());
 }

@@ -13,7 +13,7 @@ export type TimeoutConfig = {
 export const featureFlags: FeatureFlags = {
   enableUserCreation: parseBoolean(process.env.ENABLE_USER_CREATION, false),
   enableSoap: parseBoolean(process.env.ENABLE_SOAP, true),
-  enableDemo: parseBoolean(process.env.ENABLE_DEMO ?? process.env.ENABLE_DEMO_MODE, true)
+  enableDemo: parseBoolean(process.env.ENABLE_DEMO ?? process.env.ENABLE_DEMO_MODE, false)
 };
 
 export const timeoutConfig: TimeoutConfig = {

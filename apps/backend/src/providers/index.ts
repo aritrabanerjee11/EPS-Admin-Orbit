@@ -4,16 +4,14 @@ import { SoapCodeProvider } from "./soap/SoapCodeProvider";
 import type { ProviderTarget } from "../types/chat";
 import { featureFlags } from "../application/config";
 
-export function getCodeProvider(providerTarget: ProviderTarget = "MOCK"): CodeProvider {
-  const providerName = process.env.CODE_PROVIDER?.toLowerCase() ?? "mock";
-
-  if (providerTarget === "MOCK" || featureFlags.enableDemo) {
+export function getCodeProvider(providerTarget: ProviderTarget = "DEV"): CodeProvider {
+  if (featureFlags.enableDemo) {
     return new MockCodeProvider();
   }
 
-  if (providerName === "soap" && featureFlags.enableSoap) {
+  if (featureFlags.enableSoap) {
     return new SoapCodeProvider();
   }
 
-  return new MockCodeProvider();
+  return new SoapCodeProvider();
 }

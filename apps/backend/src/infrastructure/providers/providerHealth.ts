@@ -9,18 +9,8 @@ export type ProviderHealth = {
   provider: string;
 };
 
-export function getProviderHealth(activeTarget: ProviderTarget = "MOCK"): ProviderHealth[] {
-  return (["MOCK", "PREPROD", "PROD"] as ProviderTarget[]).map((target) => {
-    if (target === "MOCK") {
-      return {
-        target,
-        label: "MOCK",
-        status: "Healthy",
-        active: target === activeTarget,
-        provider: "Mock"
-      };
-    }
-
+export function getProviderHealth(activeTarget: ProviderTarget = "DEV"): ProviderHealth[] {
+  return (["DEV", "TEST", "PREPROD", "PROD"] as ProviderTarget[]).map((target) => {
     if (!featureFlags.enableSoap && !featureFlags.enableDemo) {
       return {
         target,

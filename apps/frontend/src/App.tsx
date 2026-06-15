@@ -1,4 +1,4 @@
-import { Activity, CircleDot, RotateCcw } from "lucide-react";
+import { Activity, CircleDot, Plus, RotateCcw } from "lucide-react";
 import { ChatWindow } from "./components/ChatWindow";
 import { CodePanel } from "./components/CodePanel";
 import { HistoryPanel } from "./components/HistoryPanel";
@@ -39,19 +39,29 @@ export function App() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-7xl gap-4 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_410px]">
-        <section className="min-h-[620px] space-y-3">
+      <main className="mx-auto grid max-w-7xl gap-4 px-4 py-4 lg:h-[calc(100vh-88px)] lg:grid-cols-[minmax(0,1fr)_410px] lg:overflow-hidden">
+        <section className="flex min-h-[620px] flex-col space-y-3 lg:min-h-0">
           {draftSaved ? (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
               <span>Draft Saved</span>
-              <button
-                type="button"
-                onClick={actions.resumePreviousSession}
-                className="inline-flex h-8 items-center gap-2 rounded-md border border-emerald-200 bg-white px-3 font-medium text-emerald-800 hover:bg-emerald-100"
-              >
-                <RotateCcw size={15} aria-hidden="true" />
-                Resume Previous Session
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={actions.resumePreviousSession}
+                  className="inline-flex h-8 items-center gap-2 rounded-md border border-emerald-200 bg-white px-3 font-medium text-emerald-800 hover:bg-emerald-100"
+                >
+                  <RotateCcw size={15} aria-hidden="true" />
+                  Resume Previous Session
+                </button>
+                <button
+                  type="button"
+                  onClick={actions.resetSession}
+                  className="inline-flex h-8 items-center gap-2 rounded-md border border-emerald-200 bg-white px-3 font-medium text-emerald-800 hover:bg-emerald-100"
+                >
+                  <Plus size={15} aria-hidden="true" />
+                  New Session
+                </button>
+              </div>
             </div>
           ) : null}
 
@@ -68,16 +78,17 @@ export function App() {
             onSend={actions.sendMessage}
           />
         </section>
-        <aside className="space-y-4">
+        <aside className="min-h-0 space-y-4 lg:overflow-y-auto lg:pb-2">
           <PreviewCard
             preview={preview}
             session={session}
             isBusy={actions.isBusy}
             onConfirm={actions.confirm}
             onEdit={actions.edit}
+            onFieldChange={actions.updateCollectedField}
             onPreview={actions.showPreview}
           />
-          <CodePanel result={result} onRetry={actions.confirm} onSwitchToMock={() => actions.switchProvider("MOCK")} />
+          <CodePanel result={result} onRetry={actions.confirm} onSwitchToMock={() => actions.switchProvider("DEV")} />
           <HistoryPanel history={history} logs={actions.logs} />
         </aside>
       </main>

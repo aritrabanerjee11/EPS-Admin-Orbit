@@ -7,7 +7,7 @@ type ProviderStatusProps = {
 };
 
 export function ProviderStatus({ active, providers, onSwitch }: ProviderStatusProps) {
-  const targets: ProviderTarget[] = ["MOCK", "PREPROD", "PROD"];
+  const targets: ProviderTarget[] = ["DEV", "TEST", "PREPROD", "PROD"];
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -31,7 +31,7 @@ export function ProviderStatus({ active, providers, onSwitch }: ProviderStatusPr
             <span className={status === "Unavailable" ? "text-zinc-400" : status === "Slow" ? "text-amber-500" : "text-emerald-500"}>
               {status === "Unavailable" ? "○" : "●"}
             </span>
-            {target}
+            {target.toLowerCase()}
           </button>
         );
       })}

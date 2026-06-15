@@ -11,13 +11,18 @@ export enum SessionState {
 
 export type ChatStatus = SessionState;
 
-export type ProviderTarget = "MOCK" | "PREPROD" | "PROD";
+export type ProviderTarget = "DEV" | "TEST" | "PREPROD" | "PROD";
 
 export type CollectedFields = {
   quantity?: number;
   environment?: string;
   codeType?: string;
   batchName?: string;
+  allowedUsages?: number;
+  productId?: string;
+  systemId?: string;
+  validFrom?: string;
+  validTo?: string;
   prodConfirmation?: string;
   [key: string]: string | number | undefined;
 };

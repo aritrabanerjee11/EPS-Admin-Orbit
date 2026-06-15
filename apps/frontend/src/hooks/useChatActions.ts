@@ -15,6 +15,7 @@ export function useChatActions() {
   const resetForEdit = useChatStore((state) => state.resetForEdit);
   const resetSession = useChatStore((state) => state.resetSession);
   const resumePreviousSession = useChatStore((state) => state.resumePreviousSession);
+  const updateCollectedFieldInStore = useChatStore((state) => state.updateCollectedField);
   const addHistory = useChatStore((state) => state.addHistory);
   const [isSlowExecution, setIsSlowExecution] = useState(false);
 
@@ -148,9 +149,20 @@ export function useChatActions() {
 
   function switchProvider(providerTarget: ProviderTarget): void {
     setProviderTarget(providerTarget);
+    updateCollectedFieldInStore("environment", providerTarget);
     setPreview(undefined);
     setResult(undefined);
-    addMessage("bot", `Provider set to ${providerTarget}.`);
+    addMessage("bot", `Environment set to ${providerTarget.toLowerCase()}.`);
+  }
+
+  function updateCollectedField(key: string, value: string | number | undefined): void {
+    updateCollectedFieldInStore(key, value);
+    if (key === "environment" && typeof value === "string") {
+      const normalized = value.toUpperCase();
+      if (normalized === "DEV" || normalized === "TEST" || normalized === "PREPROD" || normalized === "PROD") {
+        setProviderTarget(normalized);
+      }
+    }
   }
 
   function continueWaiting(): void {
@@ -170,8 +182,10 @@ export function useChatActions() {
     cancel,
     edit,
     switchProvider,
+    updateCollectedField,
     continueWaiting,
     resumePreviousSession,
+    resetSession,
     isBusy,
     isExecuting: confirmMutation.isPending,
     isSlowExecution,

@@ -33,7 +33,7 @@ export function parseCommand(message: string): ParsedCommand {
     return { type: "retry" };
   }
 
-  const providerMatch = normalized.match(/\b(?:switch(?: provider)? to|use)\s+(mock|preprod|prod)\b/);
+  const providerMatch = normalized.match(/\b(?:switch(?: provider)? to|use)\s+(dev|test|preprod|prod)\b/);
   if (providerMatch?.[1]) {
     return { type: "switch_provider", providerTarget: providerMatch[1].toUpperCase() as ProviderTarget };
   }

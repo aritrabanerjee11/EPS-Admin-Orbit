@@ -76,7 +76,7 @@ export function CodePanel({ result, onRetry, onSwitchToMock }: CodePanelProps) {
                 className="inline-flex h-8 items-center gap-2 rounded-md border border-red-200 bg-white px-3 font-medium text-red-700 hover:bg-red-100"
               >
                 <Shuffle size={15} aria-hidden="true" />
-                Switch to Mock
+                Switch to dev
               </button>
             </div>
           </div>

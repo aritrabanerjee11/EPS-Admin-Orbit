@@ -39,12 +39,12 @@ export function ChatWindow({
   }, [messages.length, isBusy]);
 
   return (
-    <div className="flex h-full min-h-[620px] flex-col rounded-md border border-zinc-200 bg-white shadow-sm">
+    <div className="flex min-h-[620px] flex-1 flex-col rounded-md border border-zinc-200 bg-white shadow-sm lg:min-h-0">
       <div className="border-b border-zinc-200 px-4 py-3">
         <h2 className="text-base font-semibold text-zinc-950">Operations Chat</h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-5">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
         <div className="space-y-4">
           {messages.map((message) => (
             <MessageBubble key={message.id} message={message} />
@@ -120,8 +120,28 @@ export function ChatWindow({
         </div>
       ) : null}
 
+      <div className="flex flex-wrap gap-2 border-t border-zinc-200 px-4 py-3">
+        <QuickAction label="Generate access codes" onClick={() => void onSend("Generate access codes")} disabled={isBusy} />
+        <QuickAction label="Preview" onClick={() => void onPreview()} disabled={isBusy} />
+        <QuickAction label="Confirm" onClick={() => void onConfirm()} disabled={isBusy} />
+        <QuickAction label="Reset" onClick={() => void onSend("reset")} disabled={isBusy} />
+      </div>
+
       <ChatInput disabled={isBusy} onSend={onSend} onPreview={onPreview} onConfirm={onConfirm} />
     </div>
+  );
+}
+
+function QuickAction({ label, disabled, onClick }: { label: string; disabled: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="h-8 rounded-md border border-zinc-300 bg-white px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {label}
+    </button>
   );
 }
 

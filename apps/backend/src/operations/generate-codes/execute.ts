@@ -1,4 +1,5 @@
 import type { Operation, OperationExecutionContext, OperationExecutionResult, OperationValidation } from "../../domain/operation";
+import { randomUUID } from "node:crypto";
 import type { ChatSession, CollectedFields, PreviewData } from "../../types/chat";
 import { getCodeProvider } from "../../providers";
 import { formatCode, unformatCode } from "../../services/codeFormatting";
@@ -17,7 +18,7 @@ export const generateCodesOperation: Operation = {
   },
 
   validate(inputs: CollectedFields, session: ChatSession): OperationValidation {
-    const normalizedInputs = applyFieldDefaults(generateCodesManifest.fields, inputs);
+    const normalizedInputs = applyGenerateDefaults(applyFieldDefaults(generateCodesManifest.fields, inputs));
     const fieldValidation = validateFields(generateCodesManifest.fields, normalizedInputs, session);
 
     if (!fieldValidation.valid) {
@@ -39,7 +40,10 @@ export const generateCodesOperation: Operation = {
       };
     }
 
-    if (session.providerTarget === "PROD" && normalizedInputs.prodConfirmation !== "CONFIRM PROD") {
+    if (
+      (session.providerTarget === "PROD" || String(normalizedInputs.environment).toUpperCase() === "PROD")
+      && normalizedInputs.prodConfirmation !== "CONFIRM PROD"
+    ) {
       return {
         valid: false,
         missingFields: ["prodConfirmation"],
@@ -61,7 +65,7 @@ export const generateCodesOperation: Operation = {
   },
 
   preview(inputs: CollectedFields, session: ChatSession): PreviewData {
-    const fields = applyFieldDefaults(generateCodesManifest.fields, inputs);
+    const fields = applyGenerateDefaults(applyFieldDefaults(generateCodesManifest.fields, inputs));
 
     return {
       operationId: "generate_codes",
@@ -85,7 +89,7 @@ export const generateCodesOperation: Operation = {
   },
 
   async execute(context: OperationExecutionContext): Promise<OperationExecutionResult> {
-    const fields = applyFieldDefaults(generateCodesManifest.fields, context.inputs);
+    const fields = applyGenerateDefaults(applyFieldDefaults(generateCodesManifest.fields, context.inputs));
     const parsed = completeGenerateFieldsSchema.parse(fields);
     const provider = getCodeProvider(context.providerTarget);
 
@@ -122,10 +126,14 @@ export const generateCodesOperation: Operation = {
 
 function collectGenerateCodeFields(message: string, current: CollectedFields): CollectedFields {
   const fields: CollectedFields = {};
-  const quantity = extractQuantity(message);
+  const quantity = extractQuantity(message, current.quantity !== undefined);
   const environment = extractEnvironment(message);
   const codeType = extractCodeType(message);
   const batchName = extractBatchName(message);
+  const allowedUsages = extractAllowedUsages(message);
+  const productId = extractProductId(message);
+  const systemId = extractSystemId(message);
+  const validDates = extractValidityDates(message);
   const prodConfirmation = /\bCONFIRM PROD\b/.test(message) ? "CONFIRM PROD" : undefined;
   const edit = extractEdit(message);
 
@@ -145,6 +153,26 @@ function collectGenerateCodeFields(message: string, current: CollectedFields): C
     fields.batchName = batchName;
   }
 
+  if (allowedUsages !== undefined) {
+    fields.allowedUsages = allowedUsages;
+  }
+
+  if (productId) {
+    fields.productId = productId;
+  }
+
+  if (systemId) {
+    fields.systemId = systemId;
+  }
+
+  if (validDates.validFrom) {
+    fields.validFrom = validDates.validFrom;
+  }
+
+  if (validDates.validTo) {
+    fields.validTo = validDates.validTo;
+  }
+
   if (prodConfirmation) {
     fields.prodConfirmation = prodConfirmation;
   }
@@ -159,8 +187,12 @@ function collectGenerateCodeFields(message: string, current: CollectedFields): C
   };
 }
 
-function extractQuantity(message: string): number | undefined {
-  const explicit = message.match(/\b(?:quantity|qty|count)\s*(?:to|is|:)?\s*(\d{1,5})\b/i);
+function extractQuantity(message: string, quantityAlreadyCollected: boolean): number | undefined {
+  const explicit = message.match(/\b(?:quantity|qty|count|tokens?|number of tokens)\s*(?:to|is|:)?\s*(\d{1,6})\b/i);
+  if (!explicit && quantityAlreadyCollected) {
+    return undefined;
+  }
+
   const general = message.match(/\b(\d{1,5})\b/);
   const value = explicit?.[1] ?? general?.[1];
   const quantity = value ? Number(value) : undefined;
@@ -174,14 +206,49 @@ function extractEnvironment(message: string): string | undefined {
     [/\bpreprod\b|\bpre-prod\b|\bpre production\b|\bpreproduction\b/, "PREPROD"],
     [/\bprod\b|\bproduction\b/, "PROD"],
     [/\buat\b/, "UAT"],
-    [/\bqa\b/, "QA"],
     [/\bdev\b|\bdevelopment\b/, "DEV"],
-    [/\bsit\b/, "SIT"],
-    [/\btest\b/, "TEST"],
-    [/\bstage\b|\bstaging\b/, "STAGE"]
+    [/\btest\b/, "TEST"]
   ];
 
   return aliases.find(([pattern]) => pattern.test(normalized))?.[1];
+}
+
+function extractAllowedUsages(message: string): number | undefined {
+  const match = message.match(/\b(?:allowed usages?|usages?|uses?)\s*(?:to|is|:)?\s*(\d{1,6})\b/i);
+  const value = match?.[1] ? Number(match[1]) : undefined;
+  return value && Number.isInteger(value) && value > 0 ? value : undefined;
+}
+
+function extractProductId(message: string): string | undefined {
+  const explicit = message.match(/\b(?:isbn|product(?:\s+id)?|external\s+id)\s*(?:to|is|:|=)?\s*([a-z0-9-]{4,80})\b/i);
+  if (explicit?.[1]) {
+    return explicit[1].trim();
+  }
+
+  const isbnLike = message.match(/\b(?:97[89][-\d]{9,17}|\d{9}[\dXx])\b/);
+  return isbnLike?.[0]?.replaceAll("-", "");
+}
+
+function extractSystemId(message: string): string | undefined {
+  const explicit = message.match(/\b(?:system(?:\s+id)?|platform)\s*(?:to|is|:|=)?\s*(olb|vst|elt_olb|elt_vst)\b/i);
+  const direct = message.match(/\b(olb|vst|elt_olb|elt_vst)\b/i);
+  const value = explicit?.[1] ?? direct?.[1];
+
+  if (!value) {
+    return undefined;
+  }
+
+  return value.toLowerCase().replace(/^elt_/, "");
+}
+
+function extractValidityDates(message: string): { validFrom?: string; validTo?: string } {
+  const validFrom = message.match(/\b(?:valid from|from)\s*(?:is|:|=)?\s*(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4})\b/i)?.[1];
+  const validTo = message.match(/\b(?:valid to|to|until)\s*(?:is|:|=)?\s*(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4})\b/i)?.[1];
+
+  return {
+    validFrom: validFrom ? normalizeDateInput(validFrom) : undefined,
+    validTo: validTo ? normalizeDateInput(validTo) : undefined
+  };
 }
 
 function extractCodeType(message: string): string | undefined {
@@ -238,6 +305,23 @@ function extractEdit(message: string): { key: string; value: string | number } |
     return { key, value: normalizeBatchName(rawValue) };
   }
 
+  if (key === "allowedUsages") {
+    const allowedUsages = Number(rawValue.match(/\d{1,6}/)?.[0]);
+    return Number.isInteger(allowedUsages) && allowedUsages > 0 ? { key, value: allowedUsages } : undefined;
+  }
+
+  if (key === "productId") {
+    return { key, value: rawValue.replace(/\s+/g, "") };
+  }
+
+  if (key === "systemId") {
+    return { key, value: rawValue.toLowerCase().replace(/^elt_/, "") };
+  }
+
+  if (key === "validFrom" || key === "validTo") {
+    return { key, value: normalizeDateInput(rawValue) };
+  }
+
   return { key, value: rawValue };
 }
 
@@ -260,10 +344,68 @@ function normalizeFieldKey(key: string): string {
     return "batchName";
   }
 
+  if (["usage", "usages", "allowedusages", "allowedusage", "uses"].includes(normalized)) {
+    return "allowedUsages";
+  }
+
+  if (["isbn", "product", "productid", "externalid"].includes(normalized)) {
+    return "productId";
+  }
+
+  if (["system", "systemid"].includes(normalized)) {
+    return "systemId";
+  }
+
+  if (["validfrom", "from"].includes(normalized)) {
+    return "validFrom";
+  }
+
+  if (["validto", "to", "until"].includes(normalized)) {
+    return "validTo";
+  }
+
   return key;
 }
 
 function normalizeBatchName(batchName: string): string {
   const normalized = batchName.trim().replace(/\s+/g, "-");
   return normalized.replace(/^batch[-_]?/i, "Batch-").replace(/^Batch$/, "Batch-A");
+}
+
+function applyGenerateDefaults(inputs: CollectedFields): CollectedFields {
+  const now = new Date();
+  const oneYearLater = new Date(now);
+  oneYearLater.setFullYear(now.getFullYear() + 1);
+
+  return {
+    ...inputs,
+    allowedUsages: inputs.allowedUsages ?? 1,
+    systemId: inputs.systemId ?? "olb",
+    codeType: inputs.codeType ?? "Numeric",
+    batchName: inputs.batchName ?? `Orbit-${randomUUID()}`,
+    validFrom: inputs.validFrom ?? formatDate(now),
+    validTo: inputs.validTo ?? formatDate(oneYearLater)
+  };
+}
+
+function normalizeDateInput(value: string): string {
+  const trimmed = value.trim();
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  const match = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (match) {
+    const day = match[1].padStart(2, "0");
+    const month = match[2].padStart(2, "0");
+    return `${match[3]}-${month}-${day}`;
+  }
+
+  const parsed = new Date(trimmed);
+  return Number.isNaN(parsed.getTime()) ? trimmed : formatDate(parsed);
+}
+
+function formatDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
 }

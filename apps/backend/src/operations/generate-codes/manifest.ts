@@ -10,8 +10,15 @@ export const generateCodesManifest: OperationManifest = {
   fields: [
     {
       key: "quantity",
-      label: "Quantity",
+      label: "Number of Tokens",
       type: "number",
+      required: true,
+      preview: true
+    },
+    {
+      key: "productId",
+      label: "ISBN or Product ID",
+      type: "text",
       required: true,
       preview: true
     },
@@ -21,15 +28,33 @@ export const generateCodesManifest: OperationManifest = {
       type: "select",
       required: true,
       preview: true,
-      options: ["PREPROD", "PROD", "UAT", "QA", "DEV", "SIT", "TEST", "STAGE"]
+      options: ["DEV", "TEST", "PREPROD", "PROD"]
+    },
+    {
+      key: "allowedUsages",
+      label: "Allowed Usages",
+      type: "number",
+      required: false,
+      preview: true,
+      defaultValue: 1
+    },
+    {
+      key: "systemId",
+      label: "System ID",
+      type: "select",
+      required: false,
+      preview: true,
+      options: ["olb", "vst"],
+      defaultValue: "olb"
     },
     {
       key: "codeType",
       label: "Code Type",
       type: "select",
-      required: true,
+      required: false,
       preview: true,
-      options: ["Alphanumeric", "Numeric", "Alphabetic"]
+      options: ["Numeric"],
+      defaultValue: "Numeric"
     },
     {
       key: "batchName",
@@ -38,6 +63,20 @@ export const generateCodesManifest: OperationManifest = {
       required: false,
       preview: true,
       defaultValue: "Batch-A"
+    },
+    {
+      key: "validFrom",
+      label: "Valid From",
+      type: "text",
+      required: false,
+      preview: true
+    },
+    {
+      key: "validTo",
+      label: "Valid To",
+      type: "text",
+      required: false,
+      preview: true
     },
     {
       key: "prodConfirmation",

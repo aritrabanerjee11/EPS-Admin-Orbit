@@ -26,7 +26,7 @@ export class MockCodeProvider implements CodeProvider {
       codeType: input.codeType,
       codes: Array.from(codes),
       generatedAt: new Date().toISOString(),
-      provider: input.providerTarget === "MOCK" ? "MOCK" : `DEMO ${input.providerTarget}`
+      provider: `DEMO ${input.providerTarget}`
     };
   }
 

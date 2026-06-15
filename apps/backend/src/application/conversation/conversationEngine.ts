@@ -64,7 +64,7 @@ export function handleConversation(request: ChatRequest): ChatResponse {
       session,
       mode: session.state === SessionState.PREVIEW ? "preview" : "collect",
       missingFields: [],
-      assistantMessage: `Provider set to ${command.providerTarget}.`,
+      assistantMessage: `Environment set to ${command.providerTarget.toLowerCase()}.`,
       events
     };
   }
